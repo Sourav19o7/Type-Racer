@@ -2,7 +2,7 @@
 
 TypeRacer is a real-time multiplayer typing race game where friends can compete to see who types the fastest. Players join rooms using unique room IDs and race against each other by typing provided text as quickly and accurately as possible.
 
-![TypeRacer Screenshot](https://via.placeholder.com/800x450.png?text=TypeRacer+Screenshot)
+![TypeRacer Screenshot](images/typeracer-screenshot.png)
 
 ## Features
 
