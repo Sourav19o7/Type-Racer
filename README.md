@@ -1,49 +1,135 @@
-# TypeRacer - Typing Race Game
+# TypeRacer - Multiplayer Typing Race Game
 
-A modern, dark-themed typing race web application that allows friends to compete in typing races using room IDs.
+TypeRacer is a real-time multiplayer typing race game where friends can compete to see who types the fastest. Players join rooms using unique room IDs and race against each other by typing provided text as quickly and accurately as possible.
+
+![TypeRacer Screenshot](https://via.placeholder.com/800x450.png?text=TypeRacer+Screenshot)
 
 ## Features
 
-- **Room-based multiplayer**: Create rooms and invite friends using a unique room ID
-- **Real-time racing**: See your friends' progress as you type
-- **Multiple text categories**: Choose from quotes, programming terms, or random words
-- **Performance metrics**: Track WPM (Words Per Minute), accuracy, and time
-- **Responsive design**: Works on desktop and mobile devices
-- **Modern dark UI**: Yellow/brown accent color scheme with the Lexend font
+- **Multiplayer Racing**: Create rooms and invite friends using a unique room ID
+- **Real-time Competition**: See everyone's progress as they type
+- **Multiple Text Categories**: Choose from quotes, programming terms, or random words
+- **Custom Texts**: Hosts can input their own text for races
+- **Performance Metrics**: Track WPM (Words Per Minute), accuracy, and time
+- **Host Controls**: Only the host can start races and control room settings
+- **Practice Mode**: Solo practice option to improve typing skills
+- **Race Results**: Detailed statistics and podium display after each race
+- **Share Results**: Share your achievements on social media
+- **Reconnection**: Automatically reconnect if you lose connection
+- **Responsive Design**: Works on desktop and mobile devices
+- **Dark UI Theme**: Modern, dark design with yellowish-brown accents
 
-## File Structure
+## Technology Stack
 
-- `index.html` - Main HTML structure
-- `styles.css` - Complete styling with CSS variables for theming
-- `script.js` - JavaScript for game logic and UI interactions
+- **Frontend**: HTML, CSS, JavaScript
+- **Backend**: Node.js, Express
+- **Real-time Communication**: Socket.IO
+- **Font**: Lexend (Google Fonts)
+- **Icons**: Material Icons
 
-## Implementation Notes
+## Installation
 
-This is a client-side only implementation for demonstration purposes. In a production environment, you'd want to:
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/typeracer.git
+cd typeracer
+```
 
-1. Implement a backend server using Node.js, Express, and Socket.io for real-time updates
-2. Store room and player data in a database
-3. Add authentication for player accounts
-4. Implement rate limiting and other security measures
-5. Add more text categories and customization options
+2. Install dependencies:
+```bash
+npm install
+```
 
-## How To Use
+3. Start the server:
+```bash
+npm start
+```
 
-1. Open `index.html` in a web browser
-2. Enter your username and either create a new room or join an existing one with a room ID
-3. If you're the host, select a text category and start the race
-4. After the countdown, type the text as quickly and accurately as possible
-5. View results at the end and choose to race again or return to the lobby
+4. Access the application in your browser:
+```
+http://localhost:3000
+```
 
-## Customization
+## Project Structure
 
-The color scheme and styling can be easily modified by changing the CSS variables in the `:root` selector in `styles.css`. The current theme uses a dark background with yellow/brown accents, but you can adjust these to match your preferences.
+```
+typeracer/
+├── public/                  # Static frontend files
+│   ├── index.html           # Main HTML structure
+│   ├── styles.css           # CSS styles
+│   ├── script.js            # Main client-side logic
+│   ├── connection.js        # Connection management
+│   └── additional-events.js # Additional event handlers
+├── server.js                # Express and Socket.IO server
+├── textSamples.js           # Text samples for races
+├── package.json             # Project metadata and dependencies
+└── README.md                # This file
+```
+
+## How to Play
+
+### Creating a Room
+1. Enter your username
+2. Click "Create Room"
+3. Share the room ID with friends
+
+### Joining a Room
+1. Enter your username
+2. Enter the room ID
+3. Click "Join Room"
+
+### Starting a Race
+1. As the host, select a text category
+2. Click "Start Race"
+3. Wait for the countdown
+4. Type the displayed text as quickly and accurately as possible
+5. View results when all players finish or time expires
+
+### Practice Mode
+1. Click "Start Practice" from the home screen
+2. Select a text category
+3. Type the displayed text to practice
+4. Click "Restart" to try again or "Exit Practice" to return to the home screen
+
+## Keyboard Shortcuts
+
+- **Alt+C**: Copy room ID (in lobby)
+- **Alt+S**: Start race (host only, in lobby)
+- **Esc**: Leave room (in lobby)
+
+## Room Host Capabilities
+
+As a room host, you can:
+- Start races
+- Change text categories
+- Submit custom text for races
+- Set race timeout duration
+- Lock/unlock the room
+- Kick players
+- Force finish a race
+
+## Deployment
+
+See the [Deployment Guide](deployment-guide.md) for instructions on deploying the application to various platforms.
+
+## Development
+
+To run in development mode with automatic server restarting:
+```bash
+npm run dev
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is available for personal and commercial use.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Credits
+## Acknowledgements
 
-- Uses the [Lexend](https://fonts.google.com/specimen/Lexend) font from Google Fonts
-- Uses [Material Icons](https://fonts.google.com/icons) for UI elements
+- Lexend font by Bonnie Shaver-Troup
+- Material Icons by Google
+- Socket.IO for real-time communication
+- Express.js team
