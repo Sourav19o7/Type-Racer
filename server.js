@@ -874,16 +874,16 @@ io.on('connection', (socket) => {
         
         switch (platform) {
             case 'twitter':
-                shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(`https://yourdomain.com/join/${roomId}`)}`;
+                shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(`https://type-racer-ho3m.onrender.com/join/${roomId}`)}`;
                 break;
             case 'facebook':
-                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://yourdomain.com/join/${roomId}`)}&quote=${encodeURIComponent(shareText)}`;
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://type-racer-ho3m.onrender.com/join/${roomId}`)}&quote=${encodeURIComponent(shareText)}`;
                 break;
             case 'whatsapp':
-                shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + `https://yourdomain.com/join/${roomId}`)}`;
+                shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + `https://type-racer-ho3m.onrender.com/join/${roomId}`)}`;
                 break;
             default:
-                shareUrl = `https://yourdomain.com/join/${roomId}`;
+                shareUrl = `https://type-racer-ho3m.onrender.com/join/${roomId}`;
                 break;
         }
         
