@@ -1,7 +1,11 @@
-// Connection status management
-
-// Create connection status indicator
+// Simple connection setup that works in both local and production
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize socket connection - no custom configuration
+    // This approach works automatically in both environments
+    const socket = io();
+    
+    console.log('Socket.IO initialized');
+    
     // Create indicator element
     const indicator = document.createElement('div');
     indicator.className = 'connection-status';
@@ -34,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isConnected = true;
         connectionLost = false;
         reconnectAttempts = 0;
+        
+        // Keep connection alive with regular pings
+        startPingInterval();
         
         // Update indicator
         indicator.classList.add('connected');
@@ -152,4 +159,26 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification('Could not rejoin previous room');
         }
     });
+
+    // Function to start the ping interval to keep connection alive
+    let pingInterval = null;
+
+    function startPingInterval() {
+        // Clear any existing interval
+        if (pingInterval) {
+            clearInterval(pingInterval);
+        }
+
+        // Start a new ping interval - send ping every 30 seconds
+        pingInterval = setInterval(() => {
+            if (socket.connected) {
+                socket.emit('ping', () => {
+                    // Pong received, connection is still good
+                });
+            }
+        }, 30000);
+    }
+
+    // Make socket available globally (needed for your other scripts)
+    window.socket = socket;
 });

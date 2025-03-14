@@ -12,7 +12,15 @@ const textSamples = require('./textSamples');
 // Setup express app
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
+// Update your Socket.IO initialization with these options
+const io = socketIO(server, {
+    pingTimeout: 60000, // How many ms without a pong packet to consider the connection closed
+    pingInterval: 25000, // How many ms before sending a new ping packet
+    upgradeTimeout: 10000, // How many ms before an upgrade is aborted
+    allowUpgrades: true, // Whether to allow transport upgrades
+    transports: ['websocket', 'polling'], // Enable websocket first, polling as fallback
+    cookie: false // Whether to use cookies for session handling (disable for performance)
+});
 
 // This line should be in your server.js file
 app.use(express.static(path.join(__dirname, 'public')));
@@ -1023,15 +1031,34 @@ io.on('connection', (socket) => {
     }
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-// For local development
+
+// Add ping/pong handler to keep connections alive
+io.on('connection', (socket) => {
+    // ... your existing socket.io connection handling code ...
+    
+    // Add ping/pong handler to keep connection alive (important for serverless)
+    socket.on('ping', (callback) => {
+        // If callback exists, call it (acting as a pong response)
+        if (typeof callback === 'function') {
+            callback();
+        } else {
+            // Otherwise, emit a pong event
+            socket.emit('pong');
+        }
+    });
+    
+    // ... rest of your socket handlers ...
+});
+
+
+
+// Modification for Vercel deployment
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+        console.log(`Server running on port ${PORT}`);
     });
-  }
-  
+}
+
 // For Vercel serverless deployment
 module.exports = server;
