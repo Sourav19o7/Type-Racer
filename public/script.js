@@ -1,3 +1,6 @@
+// Connect to Socket.IO server
+const socket = io();
+
 // DOM Elements
 const screens = {
     home: document.getElementById('home-screen'),
@@ -36,6 +39,22 @@ const firstPlacePlayer = document.getElementById('first-place-player');
 const secondPlacePlayer = document.getElementById('second-place-player');
 const thirdPlacePlayer = document.getElementById('third-place-player');
 
+// Additional element references
+const customTextContainer = document.getElementById('custom-text-container');
+const customTextInput = document.getElementById('custom-text-input');
+const submitCustomTextBtn = document.getElementById('submit-custom-text');
+const toggleLockBtn = document.getElementById('toggle-lock-btn');
+const toggleReadyBtn = document.getElementById('toggle-ready-btn');
+const raceTimeoutInput = document.getElementById('race-timeout');
+const forceFinishBtn = document.getElementById('force-finish-btn');
+const hostRaceControls = document.getElementById('host-race-controls');
+const roomControls = document.getElementById('room-controls');
+
+// Social sharing buttons
+const shareTwitterBtn = document.getElementById('share-twitter');
+const shareFacebookBtn = document.getElementById('share-facebook');
+const shareWhatsappBtn = document.getElementById('share-whatsapp');
+
 // Game state
 let gameState = {
     currentScreen: 'home',
@@ -52,20 +71,10 @@ let gameState = {
     totalCharacters: 0,
     completedWords: 0,
     isRaceComplete: false,
-    raceResults: [],
     timerInterval: null
 };
 
 // Helper Functions
-function generateRoomId() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed similar looking characters
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
-
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -84,11 +93,6 @@ function calculateAccuracy(errors, totalChars) {
     return Math.round((1 - errors / totalChars) * 100);
 }
 
-function getRandomText(category) {
-    const texts = textSamples[category];
-    return texts[Math.floor(Math.random() * texts.length)];
-}
-
 function showScreen(screenName) {
     // Hide all screens
     Object.values(screens).forEach(screen => {
@@ -103,32 +107,69 @@ function showScreen(screenName) {
     if (screenName === 'race') {
         typingInput.focus();
         typingInput.value = '';
+        
+        // Show host controls if host
+        if (gameState.isHost) {
+            hostRaceControls.style.display = 'block';
+        } else {
+            hostRaceControls.style.display = 'none';
+        }
+    }
+    
+    // Apply special behavior for lobby screen
+    if (screenName === 'lobby') {
+        // Show host controls
+        if (gameState.isHost) {
+            startRaceBtn.style.display = 'block';
+            raceTimeoutInput.disabled = false;
+            toggleLockBtn.style.display = 'block';
+            textCategorySelect.disabled = false;
+            document.querySelector('.select-wrapper').classList.remove('disabled');
+        } else {
+            startRaceBtn.style.display = 'none';
+            raceTimeoutInput.disabled = true;
+            toggleLockBtn.style.display = 'none';
+            textCategorySelect.disabled = true;
+            document.querySelector('.select-wrapper').classList.add('disabled');
+        }
+        
+        // Init custom text container visibility
+        if (textCategorySelect.value === 'custom') {
+            customTextContainer.style.display = 'block';
+        } else {
+            customTextContainer.style.display = 'none';
+        }
     }
 }
 
-// Simulate player progress updates
-function simulatePlayerProgress() {
-    // In a real implementation, this would be replaced with real data from the network
-    return gameState.players.map(player => {
-        if (player.username === gameState.username) {
-            // Use the actual progress for the current player
-            return {
-                username: player.username,
-                progress: Math.round((gameState.completedWords / gameState.selectedText.split(' ').length) * 100)
-            };
-        } else {
-            // Simulate progress for other players
-            const randomProgress = Math.min(
-                Math.floor(Math.random() * 5) + player.progress,
-                100
-            );
-            player.progress = randomProgress;
-            return {
-                username: player.username,
-                progress: randomProgress
-            };
+function levenshteinDistance(a, b) {
+    const matrix = [];
+    
+    // Initialize matrix
+    for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+    }
+    
+    // Fill matrix
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1, // substitution
+                    matrix[i][j - 1] + 1,     // insertion
+                    matrix[i - 1][j] + 1      // deletion
+                );
+            }
         }
-    });
+    }
+    
+    return matrix[b.length][a.length];
 }
 
 // UI Update Functions
@@ -168,17 +209,21 @@ function updateRaceText() {
 }
 
 function updateProgressBars() {
-    const progressData = simulatePlayerProgress();
     progressBarsContainer.innerHTML = '';
     
-    progressData.forEach(player => {
+    gameState.players.forEach(player => {
         const playerInitial = player.username.charAt(0).toUpperCase();
+        const isCurrentPlayer = player.id === socket.id ? 'current-player' : '';
+        const typingIndicator = player.isTyping ? `<span class="typing-indicator"><span class="material-icons">keyboard</span></span>` : '';
+        const finishedIndicator = player.finished ? `<span class="finished-icon"><span class="material-icons">emoji_events</span></span>` : '';
         
         const progressBar = `
-            <div class="progress-bar">
+            <div class="progress-bar ${isCurrentPlayer}">
                 <div class="player-info">
                     <div class="player-avatar">${playerInitial}</div>
                     <div class="player-name">${player.username}</div>
+                    ${typingIndicator}
+                    ${finishedIndicator}
                 </div>
                 <div class="progress-track">
                     <div class="progress-fill" style="width: ${player.progress}%"></div>
@@ -192,22 +237,60 @@ function updateProgressBars() {
 }
 
 function updatePlayersList() {
-    playersContainer.innerHTML = '';
+    // Check if playersContainer exists to prevent potential errors
+    if (!playersContainer) {
+        console.error('Players container not found');
+        return;
+    }
+
+    // Use document fragment for better performance
+    const fragment = document.createDocumentFragment();
     
     gameState.players.forEach(player => {
-        const playerInitial = player.username.charAt(0).toUpperCase();
-        const isHost = player.isHost ? '<span class="host-badge">Host</span>' : '';
+        // Safely handle username
+        const username = player.username || 'Anonymous';
+        const playerInitial = username.charAt(0).toUpperCase();
         
-        const playerItem = `
-            <li>
-                <div class="player-avatar">${playerInitial}</div>
-                <div class="player-name">${player.username}</div>
-                ${isHost}
-            </li>
+        // Create player list item element
+        const playerItem = document.createElement('li');
+        
+        // Add ready state class
+        if (player.isReady) {
+            playerItem.classList.add('ready');
+        }
+        
+        // Create player content with updated UI
+        playerItem.innerHTML = `
+            <div class="player-avatar">${playerInitial}</div>
+            <div class="player-name">${username}</div>
+            ${player.isHost ? '<span class="host-badge">Host</span>' : ''}
+            ${player.isReady ? '<span class="ready-indicator"><span class="material-icons">check_circle</span></span>' : ''}
+            ${gameState.isHost && player.id !== socket.id ? 
+                `<button class="icon-btn small kick-player" data-player-id="${player.id}" title="Kick Player">
+                    <span class="material-icons">person_remove</span>
+                </button>` : ''}
         `;
         
-        playersContainer.innerHTML += playerItem;
+        // Add kick event listener if applicable
+        if (gameState.isHost && player.id !== socket.id) {
+            const kickButton = playerItem.querySelector('.kick-player');
+            if (kickButton) {
+                kickButton.addEventListener('click', function() {
+                    const playerId = this.getAttribute('data-player-id');
+                    if (confirm('Are you sure you want to kick this player?')) {
+                        socket.emit('kickPlayer', { playerId });
+                    }
+                });
+            }
+        }
+        
+        // Append to fragment
+        fragment.appendChild(playerItem);
     });
+    
+    // Clear and append all players at once
+    playersContainer.innerHTML = '';
+    playersContainer.appendChild(fragment);
 }
 
 function updateRaceStats() {
@@ -226,54 +309,173 @@ function updateRaceStats() {
     // Update accuracy
     const accuracy = calculateAccuracy(gameState.errors, gameState.totalCharacters + gameState.errors);
     accuracyDisplay.textContent = `${accuracy}%`;
+    
+    // Send progress update to server
+    const progress = Math.round((gameState.completedWords / gameState.selectedText.split(' ').length) * 100);
+    socket.emit('updateProgress', {
+        progress,
+        wpm,
+        accuracy
+    });
 }
 
 function updateResultsScreen() {
-    // Sort results by WPM (highest first)
-    const sortedResults = [...gameState.raceResults].sort((a, b) => b.wpm - a.wpm);
+    // Sort players by WPM (highest first)
+    const sortedPlayers = [...gameState.players]
+        .filter(player => player.finished)
+        .sort((a, b) => b.wpm - a.wpm);
     
     // Update podium
-    if (sortedResults.length >= 1) {
-        const first = sortedResults[0];
+    if (sortedPlayers.length >= 1) {
+        const first = sortedPlayers[0];
         firstPlacePlayer.querySelector('.avatar').textContent = first.username.charAt(0).toUpperCase();
         firstPlacePlayer.querySelector('.name').textContent = first.username;
         firstPlacePlayer.querySelector('.wpm').textContent = `${first.wpm} WPM`;
+    } else {
+        // Hide first place if no finishers
+        firstPlacePlayer.style.visibility = 'hidden';
     }
     
-    if (sortedResults.length >= 2) {
-        const second = sortedResults[1];
+    if (sortedPlayers.length >= 2) {
+        const second = sortedPlayers[1];
         secondPlacePlayer.querySelector('.avatar').textContent = second.username.charAt(0).toUpperCase();
         secondPlacePlayer.querySelector('.name').textContent = second.username;
         secondPlacePlayer.querySelector('.wpm').textContent = `${second.wpm} WPM`;
+        secondPlacePlayer.style.visibility = 'visible';
+    } else {
+        // Hide second place if less than 2 finishers
+        secondPlacePlayer.style.visibility = 'hidden';
     }
     
-    if (sortedResults.length >= 3) {
-        const third = sortedResults[2];
+    if (sortedPlayers.length >= 3) {
+        const third = sortedPlayers[2];
         thirdPlacePlayer.querySelector('.avatar').textContent = third.username.charAt(0).toUpperCase();
         thirdPlacePlayer.querySelector('.name').textContent = third.username;
         thirdPlacePlayer.querySelector('.wpm').textContent = `${third.wpm} WPM`;
+        thirdPlacePlayer.style.visibility = 'visible';
+    } else {
+        // Hide third place if less than 3 finishers
+        thirdPlacePlayer.style.visibility = 'hidden';
     }
     
     // Update results table
     resultsTableBody.innerHTML = '';
-    sortedResults.forEach((result, index) => {
+    
+    // Show all players in the table, even non-finishers
+    const allPlayers = [...gameState.players].sort((a, b) => {
+        // Finishers first, sorted by WPM
+        if (a.finished && b.finished) return b.wpm - a.wpm;
+        if (a.finished) return -1;
+        if (b.finished) return 1;
+        // Non-finishers sorted by progress
+        return b.progress - a.progress;
+    });
+    
+    allPlayers.forEach((player, index) => {
         const row = `
-            <tr>
+            <tr class="${player.finished ? 'finished' : ''}">
                 <td>${index + 1}</td>
-                <td>${result.username}</td>
-                <td>${result.wpm}</td>
-                <td>${result.accuracy}%</td>
-                <td>${result.time}</td>
+                <td>${player.username}${player.isHost ? ' (Host)' : ''}</td>
+                <td>${player.wpm}</td>
+                <td>${player.accuracy}%</td>
+                <td>${player.finishTime || (player.progress < 100 ? `${player.progress}%` : '-')}</td>
             </tr>
         `;
         resultsTableBody.innerHTML += row;
     });
+    
+    // Setup share buttons
+    setupShareButtons();
 }
 
-// Game Logic Functions
-function startRace() {
-    // Set up race state
-    gameState.selectedText = getRandomText(textCategorySelect.value);
+// Social sharing setup
+function setupShareButtons() {
+    // Find current player
+    const player = gameState.players.find(p => p.id === socket.id);
+    if (!player) return;
+    
+    // Twitter share
+    shareTwitterBtn.addEventListener('click', () => {
+        socket.emit('shareResults', { platform: 'twitter' });
+    });
+    
+    // Facebook share
+    shareFacebookBtn.addEventListener('click', () => {
+        socket.emit('shareResults', { platform: 'facebook' });
+    });
+    
+    // WhatsApp share
+    shareWhatsappBtn.addEventListener('click', () => {
+        socket.emit('shareResults', { platform: 'whatsapp' });
+    });
+}
+
+// Socket.IO Event Handlers
+socket.on('roomCreated', (data) => {
+    gameState.roomId = data.roomId;
+    gameState.isHost = data.isHost;
+    gameState.players = data.players;
+    
+    // Update UI
+    roomIdDisplay.textContent = data.roomId;
+    updatePlayersList();
+    
+    // Show/hide host-only controls
+    startRaceBtn.style.display = data.isHost ? 'block' : 'none';
+    
+    // Show lobby screen
+    showScreen('lobby');
+});
+
+socket.on('roomJoined', (data) => {
+    gameState.roomId = data.roomId;
+    gameState.isHost = data.isHost;
+    gameState.players = data.players;
+    gameState.category = data.category;
+    
+    // Update UI
+    roomIdDisplay.textContent = data.roomId;
+    textCategorySelect.value = data.category;
+    updatePlayersList();
+    
+    // Show/hide host-only controls
+    startRaceBtn.style.display = data.isHost ? 'block' : 'none';
+    
+    // Show lobby screen
+    showScreen('lobby');
+});
+
+socket.on('playerJoined', (data) => {
+    // Update players list
+    gameState.players = data.players;
+    updatePlayersList();
+    
+    // Show notification
+    showNotification(`${data.players[data.players.length - 1].username} joined`);
+});
+
+socket.on('categoryUpdated', (data) => {
+    // Update category select
+    textCategorySelect.value = data.category;
+    
+    // Show/hide custom text container
+    if (data.category === 'custom') {
+        customTextContainer.style.display = 'block';
+    } else {
+        customTextContainer.style.display = 'none';
+    }
+});
+
+socket.on('error', (data) => {
+    // Show error message
+    alert(data.message);
+});
+
+socket.on('raceCountdown', (data) => {
+    // Store race text
+    gameState.selectedText = data.text;
+    
+    // Reset race state
     gameState.currentWordIndex = 0;
     gameState.currentCharIndex = 0;
     gameState.errors = 0;
@@ -281,95 +483,70 @@ function startRace() {
     gameState.completedWords = 0;
     gameState.isRaceComplete = false;
     
-    // Initialize player progress
-    gameState.players.forEach(player => {
-        player.progress = 0;
-    });
-    
     // Show countdown screen
     showScreen('countdown');
-    
-    // Countdown sequence
-    let countdown = 3;
-    countdownDisplay.textContent = countdown;
-    
-    const countdownInterval = setInterval(() => {
-        countdown--;
-        
-        if (countdown > 0) {
-            countdownDisplay.textContent = countdown;
-        } else {
-            clearInterval(countdownInterval);
-            startActualRace();
-        }
-    }, 1000);
-}
+    countdownDisplay.textContent = data.countdown;
+});
 
-function startActualRace() {
+socket.on('raceCountdownUpdate', (data) => {
+    // Update countdown
+    countdownDisplay.textContent = data.countdown;
+});
+
+socket.on('raceStarted', (data) => {
+    // Store race start time
+    gameState.raceStartTime = data.startTime;
+    
     // Show race screen
     showScreen('race');
     
     // Set up race text
     updateRaceText();
     
-    // Start race timer
-    gameState.raceStartTime = new Date().getTime();
-    
-    // Start progress update interval
-    const progressInterval = setInterval(() => {
-        if (gameState.isRaceComplete) {
-            clearInterval(progressInterval);
-            return;
-        }
-        
-        updateProgressBars();
-    }, 500);
+    // Initialize progress bars
+    updateProgressBars();
     
     // Start stats update interval
-    gameState.timerInterval = setInterval(() => {
-        if (gameState.isRaceComplete) {
-            clearInterval(gameState.timerInterval);
-            return;
-        }
-        
-        updateRaceStats();
-    }, 1000);
-}
+    gameState.timerInterval = setInterval(updateRaceStats, 1000);
+});
 
-function completeRace() {
-    // Mark race as complete
-    gameState.isRaceComplete = true;
-    gameState.raceEndTime = new Date().getTime();
-    
-    // Calculate final stats
-    const elapsedSeconds = Math.floor((gameState.raceEndTime - gameState.raceStartTime) / 1000);
-    const wpm = calculateWPM(gameState.totalCharacters, elapsedSeconds);
-    const accuracy = calculateAccuracy(gameState.errors, gameState.totalCharacters + gameState.errors);
-    
-    // Add current player's result
-    gameState.raceResults.push({
-        username: gameState.username,
-        wpm: wpm,
-        accuracy: accuracy,
-        time: formatTime(elapsedSeconds)
-    });
-    
-    // Simulate results for other players
-    gameState.players.forEach(player => {
-        if (player.username !== gameState.username) {
-            // Create simulated results for other players
-            const simulatedWpm = Math.floor(Math.random() * 50) + 30; // Random WPM between 30-80
-            const simulatedAccuracy = Math.floor(Math.random() * 15) + 85; // Random accuracy between 85-100%
-            const simulatedTime = formatTime(Math.floor(Math.random() * 30) + elapsedSeconds - 10); // Random time around the player's time
-            
-            gameState.raceResults.push({
-                username: player.username,
-                wpm: simulatedWpm,
-                accuracy: simulatedAccuracy,
-                time: simulatedTime
-            });
+socket.on('progressUpdated', (data) => {
+    // Find player in game state and update their progress
+    const player = gameState.players.find(p => p.id === data.playerId);
+    if (player) {
+        player.progress = data.progress;
+        player.wpm = data.wpm;
+        player.accuracy = data.accuracy;
+        
+        // Update progress bars
+        updateProgressBars();
+    }
+});
+
+socket.on('playerFinished', (data) => {
+    // Find player and update their stats
+    const player = gameState.players.find(p => p.id === data.playerId);
+    if (player) {
+        player.progress = 100;
+        player.wpm = data.wpm;
+        player.accuracy = data.accuracy;
+        player.finished = true;
+        player.finishTime = data.time;
+        
+        // Update progress bars
+        updateProgressBars();
+        
+        // Show notification
+        if (player.id !== socket.id) {
+            // Only show notification for other players
+            showNotification(`${player.username} finished with ${data.wpm} WPM!`);
         }
-    });
+    }
+});
+
+socket.on('raceCompleted', (data) => {
+    // Update players data
+    gameState.players = data.players;
     
     // Clear timer interval
     clearInterval(gameState.timerInterval);
@@ -377,93 +554,103 @@ function completeRace() {
     // Update results screen and show it
     updateResultsScreen();
     showScreen('results');
-}
-
-// Event Handlers
-createRoomBtn.addEventListener('click', () => {
-    const username = usernameInput.value.trim();
     
-    if (!username) {
-        alert('Please enter a username');
-        return;
+    // Show notification if race was forced
+    if (data.forcedByHost) {
+        showNotification('Race was ended by the host');
+    } else if (data.forcedByTimeout) {
+        showNotification('Race ended due to time limit');
+    }
+});
+
+socket.on('resetRace', (data) => {
+    // Update players
+    gameState.players = data.players;
+    
+    // Clear race state
+    gameState.selectedText = '';
+    gameState.raceStartTime = null;
+    gameState.raceEndTime = null;
+    gameState.currentWordIndex = 0;
+    gameState.currentCharIndex = 0;
+    gameState.errors = 0;
+    gameState.totalCharacters = 0;
+    gameState.completedWords = 0;
+    gameState.isRaceComplete = false;
+    
+    // Clear timer interval if still active
+    if (gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+        gameState.timerInterval = null;
     }
     
-    // Generate room ID
-    const roomId = generateRoomId();
-    
-    // Set up game state
-    gameState.roomId = roomId;
-    gameState.username = username;
-    gameState.isHost = true;
-    gameState.players = [
-        { username: username, isHost: true, progress: 0 }
-    ];
-    
     // Update UI
-    roomIdDisplay.textContent = roomId;
     updatePlayersList();
     
     // Show lobby screen
     showScreen('lobby');
 });
 
-joinRoomBtn.addEventListener('click', () => {
-    const username = usernameInput.value.trim();
-    const roomId = roomIdInput.value.trim().toUpperCase();
-    
-    if (!username) {
-        alert('Please enter a username');
-        return;
-    }
-    
-    if (!roomId) {
-        alert('Please enter a room ID');
-        return;
-    }
-    
-    // In a real app, we would validate the room ID here
-    // For demo purposes, we'll assume the room exists
-    
-    // Set up game state
-    gameState.roomId = roomId;
-    gameState.username = username;
-    gameState.isHost = false;
-    
-    // Simulate existing players in the room
-    const hostName = `Host_${roomId.substring(0, 3)}`;
-    gameState.players = [
-        { username: hostName, isHost: true, progress: 0 },
-        { username: username, isHost: false, progress: 0 }
-    ];
-    
-    // Add 0-2 more random players
-    const extraPlayers = Math.floor(Math.random() * 3);
-    for (let i = 0; i < extraPlayers; i++) {
-        gameState.players.push({
-            username: `Player${i + 1}`,
-            isHost: false,
-            progress: 0
-        });
-    }
+socket.on('playerLeft', (data) => {
+    // Update players
+    gameState.players = data.players;
     
     // Update UI
-    roomIdDisplay.textContent = roomId;
     updatePlayersList();
     
-    // Show lobby screen
-    showScreen('lobby');
-});
-
-startRaceBtn.addEventListener('click', () => {
-    if (!gameState.isHost) {
-        alert('Only the host can start the race');
-        return;
+    // Update progress bars if in race
+    if (gameState.currentScreen === 'race') {
+        updateProgressBars();
     }
     
-    startRace();
+    // Show notification
+    showNotification(`${data.username} left the room`);
 });
 
-leaveLobbyBtn.addEventListener('click', () => {
+socket.on('hostChanged', (data) => {
+    // Update host status
+    gameState.isHost = data.isHost;
+    
+    // Show/hide host-only controls based on current screen
+    if (gameState.currentScreen === 'lobby') {
+        startRaceBtn.style.display = data.isHost ? 'block' : 'none';
+        raceTimeoutInput.disabled = !data.isHost;
+        toggleLockBtn.style.display = data.isHost ? 'block' : 'none';
+        textCategorySelect.disabled = !data.isHost;
+        
+        if (data.isHost) {
+            document.querySelector('.select-wrapper').classList.remove('disabled');
+        } else {
+            document.querySelector('.select-wrapper').classList.add('disabled');
+        }
+    } else if (gameState.currentScreen === 'race') {
+        hostRaceControls.style.display = data.isHost ? 'block' : 'none';
+    }
+    
+    // Update players list to reflect new host
+    updatePlayersList();
+    
+    // Show notification
+    if (data.isHost) {
+        showNotification("You are now the host of this room");
+    }
+});
+
+socket.on('playerKicked', (data) => {
+    // Update players
+    gameState.players = data.players;
+    
+    // Update UI
+    updatePlayersList();
+    
+    // Show notification
+    showNotification(`${data.kickedUsername} was kicked from the room`);
+});
+
+socket.on('kickedFromRoom', () => {
+    // Show notification
+    showNotification('You were kicked from the room');
+    
     // Reset game state
     gameState = {
         currentScreen: 'home',
@@ -480,7 +667,189 @@ leaveLobbyBtn.addEventListener('click', () => {
         totalCharacters: 0,
         completedWords: 0,
         isRaceComplete: false,
-        raceResults: [],
+        timerInterval: null
+    };
+    
+    // Go back to home screen
+    showScreen('home');
+});
+
+socket.on('roomLockChanged', (data) => {
+    // Update lock button icon
+    if (toggleLockBtn) {
+        toggleLockBtn.innerHTML = data.locked ? 
+            '<span class="material-icons">lock</span>' : 
+            '<span class="material-icons">lock_open</span>';
+        
+        toggleLockBtn.title = data.locked ? 'Unlock Room' : 'Lock Room';
+    }
+    
+    // Show notification
+    showNotification(`Room is now ${data.locked ? 'locked' : 'unlocked'}`);
+    
+    // Update room status display
+    const roomStatusElem = document.querySelector('.room-status');
+    if (!roomStatusElem) {
+        // Create room status element if it doesn't exist
+        const statusElem = document.createElement('div');
+        statusElem.className = `room-status ${data.locked ? 'locked' : ''}`;
+        statusElem.innerHTML = `
+            <span class="material-icons">${data.locked ? 'lock' : 'lock_open'}</span>
+            <span>Room is ${data.locked ? 'locked' : 'unlocked'}</span>
+        `;
+        
+        // Add after room-id
+        const roomHeader = document.querySelector('.room-header');
+        roomHeader.appendChild(statusElem);
+    } else {
+        // Update existing status element
+        roomStatusElem.className = `room-status ${data.locked ? 'locked' : ''}`;
+        roomStatusElem.innerHTML = `
+            <span class="material-icons">${data.locked ? 'lock' : 'lock_open'}</span>
+            <span>Room is ${data.locked ? 'locked' : 'unlocked'}</span>
+        `;
+    }
+});
+
+socket.on('playerReadyChanged', (data) => {
+    // Find player and update ready status
+    const player = gameState.players.find(p => p.id === data.playerId);
+    if (player) {
+        player.isReady = data.ready;
+        
+        // Update players list
+        updatePlayersList();
+        
+        // Update ready button if it's the current player
+        if (data.playerId === socket.id) {
+            toggleReadyBtn.innerHTML = data.ready ? 
+                '<span class="material-icons">check_circle</span>' : 
+                '<span class="material-icons">check_circle_outline</span>';
+            
+            toggleReadyBtn.title = data.ready ? 'Mark as Not Ready' : 'Mark as Ready';
+        }
+        
+        // Show notification for other players
+        if (data.playerId !== socket.id) {
+            showNotification(`${player.username} is ${data.ready ? 'ready' : 'not ready'}`);
+        }
+    }
+});
+
+socket.on('customTextSubmitted', (data) => {
+    // Update category
+    textCategorySelect.value = data.category;
+    
+    // Show preview
+    customTextContainer.style.display = 'block';
+    
+    // Show notification
+    showNotification('Custom text has been set');
+    
+    // If custom text input exists, update placeholder
+    if (customTextInput) {
+        customTextInput.placeholder = `Current text: ${data.previewText}`;
+        customTextInput.value = '';
+    }
+});
+
+socket.on('raceTimeoutSet', (data) => {
+    // Update timeout input
+    raceTimeoutInput.value = data.timeout;
+    
+    // Show notification
+    showNotification(`Race timeout set to ${data.timeout} seconds`);
+});
+
+socket.on('shareResultsUrl', (data) => {
+    // Open share URL in new window
+    window.open(data.url, '_blank');
+});
+
+// Simple notification system
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Fade in
+    setTimeout(() => {
+        notification.classList.add('active');
+    }, 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.classList.remove('active');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+// Event Listeners
+createRoomBtn.addEventListener('click', () => {
+    const username = usernameInput.value.trim();
+    
+    if (!username) {
+        alert('Please enter a username');
+        return;
+    }
+    
+    // Store username
+    gameState.username = username;
+    
+    // Create room on server
+    socket.emit('createRoom', { username });
+});
+
+joinRoomBtn.addEventListener('click', () => {
+    const username = usernameInput.value.trim();
+    const roomId = roomIdInput.value.trim();
+    
+    if (!username) {
+        alert('Please enter a username');
+        return;
+    }
+    
+    if (!roomId) {
+        alert('Please enter a room ID');
+        return;
+    }
+    
+    // Store username
+    gameState.username = username;
+    
+    // Join room on server
+    socket.emit('joinRoom', { roomId, username });
+});
+
+startRaceBtn.addEventListener('click', () => {
+    // Request to start race
+    socket.emit('startRace');
+});
+
+leaveLobbyBtn.addEventListener('click', () => {
+    // Leave room on server
+    socket.emit('leaveRoom');
+    
+    // Reset game state
+    gameState = {
+        currentScreen: 'home',
+        roomId: '',
+        players: [],
+        isHost: false,
+        username: '',
+        selectedText: '',
+        raceStartTime: null,
+        raceEndTime: null,
+        currentWordIndex: 0,
+        currentCharIndex: 0,
+        errors: 0,
+        totalCharacters: 0,
+        completedWords: 0,
+        isRaceComplete: false,
         timerInterval: null
     };
     
@@ -500,6 +869,8 @@ copyRoomIdBtn.addEventListener('click', () => {
             setTimeout(() => {
                 copyRoomIdBtn.querySelector('.material-icons').textContent = 'content_copy';
             }, 2000);
+            
+            showNotification('Room ID copied to clipboard');
         })
         .catch(err => {
             console.error('Failed to copy room ID: ', err);
@@ -508,67 +879,118 @@ copyRoomIdBtn.addEventListener('click', () => {
 });
 
 backToLobbyBtn.addEventListener('click', () => {
-    // Reset race state but keep room info
-    gameState.selectedText = '';
-    gameState.raceStartTime = null;
-    gameState.raceEndTime = null;
-    gameState.currentWordIndex = 0;
-    gameState.currentCharIndex = 0;
-    gameState.errors = 0;
-    gameState.totalCharacters = 0;
-    gameState.completedWords = 0;
-    gameState.isRaceComplete = false;
-    gameState.raceResults = [];
-    
-    // Reset player progress
-    gameState.players.forEach(player => {
-        player.progress = 0;
-    });
-    
-    // Update UI
-    updatePlayersList();
-    
-    // Show lobby screen
+    // In multiplayer, just go back to the lobby
     showScreen('lobby');
 });
 
 newRaceBtn.addEventListener('click', () => {
-    // Start a new race
-    startRace();
+    // Request to start a new race (host only)
+    if (gameState.isHost) {
+        socket.emit('playAgain');
+    } else {
+        alert('Only the host can start a new race');
+    }
 });
 
-// Helper function to calculate edit distance for error detection
-function levenshteinDistance(a, b) {
-    const matrix = [];
-    
-    // Initialize matrix
-    for (let i = 0; i <= b.length; i++) {
-        matrix[i] = [i];
-    }
-    
-    for (let j = 0; j <= a.length; j++) {
-        matrix[0][j] = j;
-    }
-    
-    // Fill matrix
-    for (let i = 1; i <= b.length; i++) {
-        for (let j = 1; j <= a.length; j++) {
-            if (b.charAt(i - 1) === a.charAt(j - 1)) {
-                matrix[i][j] = matrix[i - 1][j - 1];
-            } else {
-                matrix[i][j] = Math.min(
-                    matrix[i - 1][j - 1] + 1, // substitution
-                    matrix[i][j - 1] + 1,     // insertion
-                    matrix[i - 1][j] + 1      // deletion
-                );
-            }
+textCategorySelect.addEventListener('change', () => {
+    // Update category on server (host only)
+    if (gameState.isHost) {
+        const category = textCategorySelect.value;
+        socket.emit('updateCategory', { category });
+        
+        // Show/hide custom text container
+        if (category === 'custom') {
+            customTextContainer.style.display = 'block';
+        } else {
+            customTextContainer.style.display = 'none';
         }
+    } else {
+        // Reset to previous value
+        textCategorySelect.value = gameState.category;
+        alert('Only the host can change the category');
     }
-    
-    return matrix[b.length][a.length];
+});
+
+// Submit custom text button
+if (submitCustomTextBtn) {
+    submitCustomTextBtn.addEventListener('click', () => {
+        if (!gameState.isHost) {
+            alert('Only the host can submit custom text');
+            return;
+        }
+        
+        const text = customTextInput.value.trim();
+        if (text.length < 20) {
+            alert('Custom text must be at least 20 characters long');
+            return;
+        }
+        
+        socket.emit('submitCustomText', { text });
+    });
 }
 
-// The most important event handler: typing input
+// Race timeout input
+if (raceTimeoutInput) {
+    raceTimeoutInput.addEventListener('change', () => {
+        if (!gameState.isHost) {
+            // Reset to default if not host
+            raceTimeoutInput.value = 180;
+            return;
+        }
+        
+        const timeout = parseInt(raceTimeoutInput.value);
+        if (isNaN(timeout) || timeout < 30 || timeout > 600) {
+            alert('Race timeout must be between 30 and 600 seconds');
+            raceTimeoutInput.value = 180;
+            return;
+        }
+        
+        socket.emit('setRaceTimeout', { timeout });
+    });
+}
+
+// Toggle room lock button
+if (toggleLockBtn) {
+    toggleLockBtn.addEventListener('click', () => {
+        if (!gameState.isHost) {
+            alert('Only the host can lock/unlock the room');
+            return;
+        }
+        
+        // Determine current lock state from button icon
+        const isCurrentlyLocked = toggleLockBtn.querySelector('.material-icons').textContent === 'lock';
+        
+        // Toggle lock state
+        socket.emit('toggleRoomLock', { locked: !isCurrentlyLocked });
+    });
+}
+
+// Toggle ready button
+if (toggleReadyBtn) {
+    toggleReadyBtn.addEventListener('click', () => {
+        // Determine current ready state from button icon
+        const isCurrentlyReady = toggleReadyBtn.querySelector('.material-icons').textContent === 'check_circle';
+        
+        // Toggle ready state
+        socket.emit('toggleReady', { ready: !isCurrentlyReady });
+    });
+}
+
+// Force finish race button
+if (forceFinishBtn) {
+    forceFinishBtn.addEventListener('click', () => {
+        if (!gameState.isHost) {
+            alert('Only the host can force finish the race');
+            return;
+        }
+        
+        if (confirm('Are you sure you want to end the race for all players?')) {
+            socket.emit('forceFinishRace');
+        }
+    });
+}
+
+// Typing input handler
 typingInput.addEventListener('input', (e) => {
     if (gameState.isRaceComplete) return;
     
@@ -609,37 +1031,56 @@ typingInput.addEventListener('input', (e) => {
     updateRaceText();
 });
 
+// Handle race completion
+function completeRace() {
+    // Mark race as complete
+    gameState.isRaceComplete = true;
+    gameState.raceEndTime = new Date().getTime();
+    
+    // Calculate final stats
+    const elapsedSeconds = Math.floor((gameState.raceEndTime - gameState.raceStartTime) / 1000);
+    const wpm = calculateWPM(gameState.totalCharacters, elapsedSeconds);
+    const accuracy = calculateAccuracy(gameState.errors, gameState.totalCharacters + gameState.errors);
+    const time = formatTime(elapsedSeconds);
+    
+    // Send race completion to server
+    socket.emit('finishRace', {
+        wpm,
+        accuracy,
+        time
+    });
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
+    // Add notification styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--primary);
+            color: #000;
+            padding: 12px 20px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+        
+        .notification.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    `;
+    document.head.appendChild(style);
+    
     // Start with home screen
     showScreen('home');
     
     // Focus on username input
     usernameInput.focus();
 });
-
-
-// Text samples
-const textSamples = {
-    quotes: [
-        "The greatest glory in living lies not in never falling, but in rising every time we fall. The way to get started is to quit talking and begin doing.",
-        "Your time is limited, so don't waste it living someone else's life. Don't be trapped by dogma – which is living with the results of other people's thinking.",
-        "If life were predictable it would cease to be life, and be without flavor. The purpose of our lives is to be happy and to help others find their happiness.",
-        "If you look at what you have in life, you'll always have more. If you look at what you don't have in life, you'll never have enough. Be thankful for what you have.",
-        "Life is what happens when you're busy making other plans. Sometimes the questions are complicated and the answers are simple."
-    ],
-    programming: [
-        "A programmer is a person who fixed a problem that you don't know you have, in a way you don't understand. Good code is like a good joke: it needs no explanation.",
-        "Programming is the art of telling another human being what one wants the computer to do. Always code as if the person who will maintain your code is a violent psychopath who knows where you live.",
-        "Software and cathedrals are much the same; first we build them, then we pray. Any fool can write code that a computer can understand. Good programmers write code that humans can understand.",
-        "The best error message is the one that never shows up. The most damaging phrase in the language is 'We've always done it this way'. Remember that there is no code faster than no code.",
-        "Programming isn't about what you know; it's about what you can figure out. Debugging is twice as hard as writing the code in the first place. Therefore, if you write the code as cleverly as possible, you are, by definition, not smart enough to debug it."
-    ],
-    random: [
-        "apple banana cherry dolphin elephant forest giraffe happiness island journey knowledge laughter mountain notebook octopus pineapple question rainbow strawberry television umbrella volcano waterfall xylophone yellow zebra",
-        "computer keyboard mouse monitor printer scanner headphones microphone speaker webcam router modem battery charger cable adapter software hardware internet website email password username login logout",
-        "pizza burger sandwich pasta salad soup noodles rice chicken beef pork fish vegetables fruits dessert cake cookies ice cream chocolate coffee tea juice water soda milk",
-        "football basketball baseball soccer tennis golf swimming running cycling hiking skiing snowboarding surfing volleyball boxing wrestling martial arts gymnastics ballet dancing singing acting painting drawing",
-        "sun moon stars planet galaxy universe earth sky cloud rain snow wind thunder lightning rainbow mountain valley river lake ocean beach desert forest jungle meadow"
-    ]
-};

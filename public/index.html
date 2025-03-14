@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>TypeRacer - Race with Friends</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div class="container">
@@ -39,6 +44,14 @@
                             <span class="material-icons">login</span>Join Room
                         </button>
                     </div>
+                    
+                    <div class="practice-section">
+                        <h3>Practice Mode</h3>
+                        <p>Want to practice alone? Try our practice mode!</p>
+                        <button id="practice-btn" class="btn secondary">
+                            <span class="material-icons">fitness_center</span>Start Practice
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -50,14 +63,24 @@
                         <div class="room-id">
                             <span>Room ID:</span>
                             <span id="room-id-display" class="highlight">ABCD12</span>
-                            <button id="copy-room-id" class="icon-btn">
+                            <button id="copy-room-id" class="icon-btn" title="Copy Room ID (Alt+C)">
                                 <span class="material-icons">content_copy</span>
                             </button>
                         </div>
                     </div>
                     
-                    <div class="players-list">
-                        <h3>Players</h3>
+                    <div class="players-list-container">
+                        <div class="players-header">
+                            <h3>Players</h3>
+                            <div id="room-controls" class="room-controls">
+                                <button id="toggle-lock-btn" class="icon-btn small" title="Lock/Unlock Room">
+                                    <span class="material-icons">lock_open</span>
+                                </button>
+                                <button id="toggle-ready-btn" class="icon-btn small" title="Mark as Ready">
+                                    <span class="material-icons">check_circle_outline</span>
+                                </button>
+                            </div>
+                        </div>
                         <ul id="players-container">
                             <!-- Players will be added dynamically -->
                         </ul>
@@ -70,16 +93,37 @@
                                 <option value="quotes">Famous Quotes</option>
                                 <option value="programming">Programming Terms</option>
                                 <option value="random">Random Words</option>
+                                <option value="custom">Custom Text</option>
                             </select>
                             <span class="material-icons">arrow_drop_down</span>
+                        </div>
+                        
+                        <div id="custom-text-container" class="custom-text-container" style="display: none;">
+                            <textarea id="custom-text-input" placeholder="Enter custom text for the race (minimum 20 characters)"></textarea>
+                            <button id="submit-custom-text" class="btn small">
+                                <span class="material-icons">check</span>Set Text
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="race-settings">
+                        <h3>Race Settings</h3>
+                        <div class="settings-grid">
+                            <div class="setting">
+                                <label for="race-timeout">Auto-finish after</label>
+                                <div class="input-group small">
+                                    <input type="number" id="race-timeout" min="30" max="600" value="180">
+                                    <span>seconds</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="actions">
-                        <button id="leave-lobby-btn" class="btn secondary">
+                        <button id="leave-lobby-btn" class="btn secondary" title="Leave Room (Esc)">
                             <span class="material-icons">arrow_back</span>Leave
                         </button>
-                        <button id="start-race-btn" class="btn primary">
+                        <button id="start-race-btn" class="btn primary" title="Start Race (Alt+S)">
                             <span class="material-icons">sports_score</span>Start Race
                         </button>
                     </div>
@@ -129,6 +173,12 @@
                         <div id="progress-bars" class="progress-bars">
                             <!-- Progress bars will be added dynamically -->
                         </div>
+                    </div>
+                    
+                    <div id="host-race-controls" class="host-race-controls" style="display: none;">
+                        <button id="force-finish-btn" class="btn secondary small">
+                            <span class="material-icons">timer_off</span>Force Finish Race
+                        </button>
                     </div>
                 </div>
             </div>
@@ -185,12 +235,84 @@
                         </tbody>
                     </table>
                     
+                    <div class="share-results">
+                        <h3>Share Your Results</h3>
+                        <div class="share-buttons">
+                            <button id="share-twitter" class="btn share twitter">
+                                <span class="material-icons">share</span>Twitter
+                            </button>
+                            <button id="share-facebook" class="btn share facebook">
+                                <span class="material-icons">share</span>Facebook
+                            </button>
+                            <button id="share-whatsapp" class="btn share whatsapp">
+                                <span class="material-icons">share</span>WhatsApp
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="actions">
                         <button id="back-to-lobby-btn" class="btn secondary">
                             <span class="material-icons">arrow_back</span>Back to Lobby
                         </button>
                         <button id="new-race-btn" class="btn primary">
                             <span class="material-icons">refresh</span>New Race
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Practice Screen -->
+            <div id="practice-screen" class="screen">
+                <div class="card race-card">
+                    <div class="practice-header">
+                        <h2>Practice Mode</h2>
+                        <div class="practice-controls">
+                            <div class="select-wrapper small">
+                                <select id="practice-text-category">
+                                    <option value="quotes">Famous Quotes</option>
+                                    <option value="programming">Programming Terms</option>
+                                    <option value="random">Random Words</option>
+                                </select>
+                                <span class="material-icons">arrow_drop_down</span>
+                            </div>
+                            <button id="new-practice-text-btn" class="btn small">
+                                <span class="material-icons">refresh</span>New Text
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="race-stats">
+                        <div class="stat">
+                            <span class="material-icons">timer</span>
+                            <span id="practice-timer">00:00</span>
+                        </div>
+                        <div class="stat">
+                            <span class="material-icons">speed</span>
+                            <span id="practice-wpm">0 WPM</span>
+                        </div>
+                        <div class="stat">
+                            <span class="material-icons">trending_up</span>
+                            <span id="practice-accuracy">100%</span>
+                        </div>
+                    </div>
+
+                    <div class="race-text-container">
+                        <div id="practice-text" class="race-text">
+                            <!-- The text to type will be inserted here -->
+                        </div>
+                    </div>
+
+                    <div class="input-group typing-input">
+                        <input type="text" id="practice-typing-input" placeholder="Type here to start...">
+                        <span class="material-icons">keyboard</span>
+                    </div>
+                    
+                    <div class="actions practice-actions">
+                        <button id="exit-practice-btn" class="btn secondary">
+                            <span class="material-icons">arrow_back</span>Exit Practice
+                        </button>
+                        <button id="restart-practice-btn" class="btn primary">
+                            <span class="material-icons">refresh</span>Restart
                         </button>
                     </div>
                 </div>
@@ -202,6 +324,29 @@
         </footer>
     </div>
 
+    <!-- Initial Loading Indicator -->
+    <div id="initial-loader" class="initial-loader">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">Loading TypeRacer...</div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="connection.js"></script>
     <script src="script.js"></script>
+    <script src="additional-events.js"></script>
+    <script src="practice-mode.js"></script>
+
+    <script>
+    // Hide loader when page is fully loaded
+    window.addEventListener('load', function() {
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.style.visibility = 'hidden';
+            }, 500);
+        }
+    });
+    </script>
 </body>
 </html>
