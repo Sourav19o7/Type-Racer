@@ -1,0 +1,659 @@
+/* Variables */
+:root {
+    /* Primary palette - yellowish-brownish */
+    --primary: #D5A021;
+    --primary-light: #F0C14B;
+    --primary-dark: #A67C00;
+    
+    /* Dark theme colors */
+    --bg-dark: #121212;
+    --bg-card: #1E1E1E;
+    --bg-input: #2D2D2D;
+    
+    /* Text colors */
+    --text-primary: #F5F5F5;
+    --text-secondary: #AAAAAA;
+    --text-disabled: #757575;
+    
+    /* Accent colors */
+    --error: #CF6679;
+    --success: #4CAF50;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    
+    /* Border radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 16px;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.14);
+    
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 300ms ease;
+}
+
+/* Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Lexend', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg) 0;
+}
+
+h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+    letter-spacing: 1px;
+}
+
+h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-md);
+}
+
+h3 {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+}
+
+.highlight {
+    color: var(--primary);
+}
+
+.tagline {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+}
+
+main {
+    flex: 1;
+    position: relative;
+}
+
+footer {
+    margin-top: var(--spacing-xl);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: var(--spacing-lg) 0;
+}
+
+.heart {
+    color: var(--error);
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+/* Cards */
+.card {
+    background-color: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-lg);
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.race-card, .result-card {
+    max-width: 900px;
+}
+
+/* Buttons */
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    font-family: 'Lexend', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+    outline: none;
+    min-height: 48px;
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+}
+
+.btn.primary {
+    background-color: var(--primary);
+    color: #000;
+}
+
+.btn.primary:hover {
+    background-color: var(--primary-light);
+}
+
+.btn.secondary {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+}
+
+.btn.secondary:hover {
+    background-color: #3D3D3D;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn .material-icons {
+    font-size: 20px;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.icon-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--primary-light);
+}
+
+/* Inputs */
+.input-group {
+    position: relative;
+    margin-bottom: var(--spacing-md);
+}
+
+.input-group input, .select-wrapper select {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    padding-right: 40px;
+    background-color: var(--bg-input);
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: 'Lexend', sans-serif;
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+    min-height: 48px;
+}
+
+.input-group input:focus, .select-wrapper select:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.input-group .material-icons, .select-wrapper .material-icons {
+    position: absolute;
+    right: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.select-wrapper {
+    position: relative;
+    margin-bottom: var(--spacing-md);
+}
+
+.select-wrapper select {
+    appearance: none;
+    cursor: pointer;
+}
+
+/* Screens */
+.screen {
+    display: none;
+    animation: fadeIn var(--transition-normal);
+}
+
+.screen.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Home Screen */
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.or-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-secondary);
+    margin: var(--spacing-md) 0;
+}
+
+.or-divider::before, .or-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--text-disabled);
+}
+
+.or-divider::before {
+    margin-right: var(--spacing-md);
+}
+
+.or-divider::after {
+    margin-left: var(--spacing-md);
+}
+
+/* Lobby Screen */
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.room-id {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background-color: var(--bg-input);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-md);
+}
+
+.players-list, .text-selection {
+    margin-bottom: var(--spacing-lg);
+}
+
+.players-list ul {
+    list-style: none;
+}
+
+.players-list li {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--bg-input);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.players-list li .player-avatar {
+    width: 32px;
+    height: 32px;
+    background-color: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: var(--spacing-md);
+    font-weight: 600;
+    color: #000;
+}
+
+.players-list li .player-name {
+    flex: 1;
+}
+
+.players-list li .host-badge {
+    background-color: var(--primary-dark);
+    color: #000;
+    padding: 2px var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Countdown Screen */
+.countdown-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+}
+
+.countdown {
+    font-size: 10rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+    margin: var(--spacing-xl) 0;
+    animation: pulse var(--transition-normal) infinite alternate;
+}
+
+@keyframes pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.1); }
+}
+
+/* Race Screen */
+.race-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 1.2rem;
+}
+
+.stat .material-icons {
+    color: var(--primary);
+}
+
+.race-text-container {
+    background-color: var(--bg-input);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.race-text {
+    font-size: 1.2rem;
+    line-height: 1.8;
+}
+
+.race-text .typed {
+    color: var(--primary-light);
+}
+
+.race-text .current {
+    background-color: var(--primary-dark);
+    border-radius: var(--radius-sm);
+    padding: 0 2px;
+}
+
+.race-text .error {
+    color: var(--error);
+    text-decoration: underline;
+}
+
+.typing-input {
+    margin-bottom: var(--spacing-xl);
+}
+
+.progress-bars {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.progress-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.progress-bar .player-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    width: 120px;
+}
+
+.progress-bar .player-avatar {
+    width: 28px;
+    height: 28px;
+    background-color: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #000;
+    font-size: 0.9rem;
+}
+
+.progress-bar .player-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9rem;
+}
+
+.progress-bar .progress-track {
+    flex: 1;
+    height: 8px;
+    background-color: var(--bg-input);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.progress-bar .progress-fill {
+    height: 100%;
+    background-color: var(--primary);
+    border-radius: var(--radius-sm);
+    transition: width var(--transition-normal);
+}
+
+.progress-bar .progress-percentage {
+    width: 60px;
+    text-align: right;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Results Screen */
+.podium {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    margin: var(--spacing-xl) 0;
+    height: 240px;
+}
+
+.podium-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 120px;
+}
+
+.podium-player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+.crown {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    background-color: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #000;
+    margin-bottom: var(--spacing-xs);
+}
+
+.first-place .avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 1.2rem;
+}
+
+.name {
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    font-size: 0.9rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.wpm {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.podium-block {
+    width: 80px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.first {
+    height: 120px;
+    background-color: var(--primary);
+}
+
+.second {
+    height: 80px;
+    background-color: var(--primary-dark);
+}
+
+.third {
+    height: 40px;
+    background-color: #7D5F00;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--spacing-xl);
+}
+
+.results-table th, .results-table td {
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--bg-input);
+}
+
+.results-table th {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .room-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .podium {
+        height: 180px;
+    }
+    
+    .podium-place {
+        width: 80px;
+    }
+    
+    .podium-block {
+        width: 60px;
+    }
+    
+    .first {
+        height: 90px;
+    }
+    
+    .second {
+        height: 60px;
+    }
+    
+    .third {
+        height: 30px;
+    }
+    
+    .results-table th:nth-child(4), .results-table td:nth-child(4) {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 2.5rem;
+    }
+    
+    .card {
+        padding: var(--spacing-md);
+    }
+    
+    .race-stats {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+    
+    .podium {
+        height: 150px;
+    }
+    
+    .avatar {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .first-place .avatar {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .results-table th:nth-child(5), .results-table td:nth-child(5) {
+        display: none;
+    }
+}

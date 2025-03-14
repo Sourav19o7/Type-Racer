@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypeRacer - Race with Friends</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><span class="highlight">Type</span>Racer</h1>
+            <p class="tagline">Race your friends. Type like the wind.</p>
+        </header>
+
+        <main>
+            <!-- Home Screen -->
+            <div id="home-screen" class="screen active">
+                <div class="card">
+                    <h2>Join or Create a Race</h2>
+                    <div class="input-group">
+                        <input type="text" id="username-input" placeholder="Your Username" maxlength="15">
+                        <span class="material-icons">person</span>
+                    </div>
+                    <div class="actions">
+                        <button id="create-room-btn" class="btn primary">
+                            <span class="material-icons">add</span>Create Room
+                        </button>
+                        <div class="or-divider">
+                            <span>OR</span>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="room-id-input" placeholder="Room ID" maxlength="6">
+                            <span class="material-icons">tag</span>
+                        </div>
+                        <button id="join-room-btn" class="btn">
+                            <span class="material-icons">login</span>Join Room
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lobby Screen -->
+            <div id="lobby-screen" class="screen">
+                <div class="card">
+                    <div class="room-header">
+                        <h2>Race Lobby</h2>
+                        <div class="room-id">
+                            <span>Room ID:</span>
+                            <span id="room-id-display" class="highlight">ABCD12</span>
+                            <button id="copy-room-id" class="icon-btn">
+                                <span class="material-icons">content_copy</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="players-list">
+                        <h3>Players</h3>
+                        <ul id="players-container">
+                            <!-- Players will be added dynamically -->
+                        </ul>
+                    </div>
+                    
+                    <div class="text-selection">
+                        <h3>Text Selection</h3>
+                        <div class="select-wrapper">
+                            <select id="text-category">
+                                <option value="quotes">Famous Quotes</option>
+                                <option value="programming">Programming Terms</option>
+                                <option value="random">Random Words</option>
+                            </select>
+                            <span class="material-icons">arrow_drop_down</span>
+                        </div>
+                    </div>
+                    
+                    <div class="actions">
+                        <button id="leave-lobby-btn" class="btn secondary">
+                            <span class="material-icons">arrow_back</span>Leave
+                        </button>
+                        <button id="start-race-btn" class="btn primary">
+                            <span class="material-icons">sports_score</span>Start Race
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Countdown Screen -->
+            <div id="countdown-screen" class="screen">
+                <div class="countdown-container">
+                    <h2>Race Begins In</h2>
+                    <div id="countdown" class="countdown">3</div>
+                    <p>Get ready to type!</p>
+                </div>
+            </div>
+
+            <!-- Race Screen -->
+            <div id="race-screen" class="screen">
+                <div class="card race-card">
+                    <div class="race-stats">
+                        <div class="stat">
+                            <span class="material-icons">timer</span>
+                            <span id="timer">00:00</span>
+                        </div>
+                        <div class="stat">
+                            <span class="material-icons">speed</span>
+                            <span id="wpm">0 WPM</span>
+                        </div>
+                        <div class="stat">
+                            <span class="material-icons">trending_up</span>
+                            <span id="accuracy">100%</span>
+                        </div>
+                    </div>
+
+                    <div class="race-text-container">
+                        <div id="race-text" class="race-text">
+                            <!-- The text to type will be inserted here -->
+                        </div>
+                    </div>
+
+                    <div class="input-group typing-input">
+                        <input type="text" id="typing-input" placeholder="Type here...">
+                        <span class="material-icons">keyboard</span>
+                    </div>
+
+                    <div class="race-progress">
+                        <h3>Race Progress</h3>
+                        <div id="progress-bars" class="progress-bars">
+                            <!-- Progress bars will be added dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="results-screen" class="screen">
+                <div class="card result-card">
+                    <h2>Race Results</h2>
+                    
+                    <div class="podium">
+                        <div class="podium-place second-place">
+                            <div class="podium-player" id="second-place-player">
+                                <div class="crown">🥈</div>
+                                <div class="avatar">2</div>
+                                <div class="name">Player 2</div>
+                                <div class="wpm">75 WPM</div>
+                            </div>
+                            <div class="podium-block second"></div>
+                        </div>
+                        
+                        <div class="podium-place first-place">
+                            <div class="podium-player" id="first-place-player">
+                                <div class="crown">🥇</div>
+                                <div class="avatar">1</div>
+                                <div class="name">Player 1</div>
+                                <div class="wpm">85 WPM</div>
+                            </div>
+                            <div class="podium-block first"></div>
+                        </div>
+                        
+                        <div class="podium-place third-place">
+                            <div class="podium-player" id="third-place-player">
+                                <div class="crown">🥉</div>
+                                <div class="avatar">3</div>
+                                <div class="name">Player 3</div>
+                                <div class="wpm">65 WPM</div>
+                            </div>
+                            <div class="podium-block third"></div>
+                        </div>
+                    </div>
+                    
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>WPM</th>
+                                <th>Accuracy</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table-body">
+                            <!-- Results will be added dynamically -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="actions">
+                        <button id="back-to-lobby-btn" class="btn secondary">
+                            <span class="material-icons">arrow_back</span>Back to Lobby
+                        </button>
+                        <button id="new-race-btn" class="btn primary">
+                            <span class="material-icons">refresh</span>New Race
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>© 2025 TypeRacer | Made with <span class="material-icons heart">favorite</span></p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
