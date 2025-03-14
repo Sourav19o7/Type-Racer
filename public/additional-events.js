@@ -688,6 +688,112 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// Player container functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const playersContainer = document.getElementById('players-container');
+    
+    // Example player data (in a real app, this would come from your socket connection)
+    const examplePlayers = [
+        { id: 'player1', name: 'RacingQueen', isHost: true, isReady: true, avatar: 'R' },
+        { id: 'player2', name: 'SpeedDemon', isHost: false, isReady: true, avatar: 'S' },
+        { id: 'player3', name: 'KeyboardWarrior', isHost: false, isReady: false, avatar: 'K' },
+        { id: 'player4', name: 'TypeMaster3000', isHost: false, isReady: false, avatar: 'T' }
+    ];
+    
+    // Function to render a player item
+    function renderPlayerItem(player) {
+        const playerElement = document.createElement('li');
+        playerElement.id = `player-${player.id}`;
+        playerElement.classList.add('player-item');
+        
+        if (player.isReady) {
+            playerElement.classList.add('ready');
+        }
+        
+        if (player.isHost) {
+            playerElement.classList.add('host');
+        }
+        
+        playerElement.innerHTML = `
+            <div class="player-avatar">${player.avatar}</div>
+            <div class="player-info">
+                <div class="player-info-row">
+                    <div class="player-name">${player.name}</div>
+                    ${player.isHost ? '<span class="host-badge">Host</span>' : ''}
+                </div>
+                <div class="player-status">
+                    <span class="player-connection">Connected</span>
+                </div>
+            </div>
+            <div class="player-metadata">
+                ${player.isReady ? 
+                    '<div class="ready-indicator"><span class="material-icons">check_circle</span>Ready</div>' : 
+                    '<div class="waiting-indicator"></div>'}
+            </div>
+        `;
+        
+        return playerElement;
+    }
+    
+    // Function to render all players
+    function renderPlayers(players) {
+        // Clear existing players
+        playersContainer.innerHTML = '';
+        
+        // Add each player
+        players.forEach(player => {
+            const playerElement = renderPlayerItem(player);
+            playersContainer.appendChild(playerElement);
+        });
+    }
+    
+    // Initial render
+    renderPlayers(examplePlayers);
+    
+    // Example of adding a player (in real app, this would be triggered by socket event)
+    window.addPlayer = function(player) {
+        const playerElement = renderPlayerItem(player);
+        // Set initial opacity to 0 for animation
+        playerElement.style.opacity = '0';
+        playersContainer.appendChild(playerElement);
+        
+        // Force reflow
+        void playerElement.offsetWidth;
+        
+        // Reset opacity to trigger animation
+        playerElement.style.opacity = '';
+    };
+    
+    // Example of removing a player (in real app, this would be triggered by socket event)
+    window.removePlayer = function(playerId) {
+        const playerElement = document.getElementById(`player-${playerId}`);
+        if (playerElement) {
+            playerElement.classList.add('leaving');
+            setTimeout(() => {
+                playerElement.remove();
+            }, 300); // Match animation duration
+        }
+    };
+    
+    // Example of updating player status (in real app, this would be triggered by socket event)
+    window.updatePlayerStatus = function(playerId, isReady) {
+        const playerElement = document.getElementById(`player-${playerId}`);
+        if (playerElement) {
+            if (isReady) {
+                playerElement.classList.add('ready');
+                const metadataDiv = playerElement.querySelector('.player-metadata');
+                metadataDiv.innerHTML = '<div class="ready-indicator"><span class="material-icons">check_circle</span>Ready</div>';
+            } else {
+                playerElement.classList.remove('ready');
+                const metadataDiv = playerElement.querySelector('.player-metadata');
+                metadataDiv.innerHTML = '<div class="waiting-indicator"></div>';
+            }
+        }
+    };
+    
+    // No demo controls - removed as requested
+});
+
 // Add keyboard shortcuts tooltip
 document.addEventListener('DOMContentLoaded', () => {
     const shortcutsTooltip = document.createElement('div');

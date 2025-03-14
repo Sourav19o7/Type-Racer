@@ -948,6 +948,186 @@ footer {
     transform: translateY(0);
 }
 
+/* Players Container Styles */
+#players-container {
+    list-style: none;
+    max-height: 250px;
+    overflow-y: auto;
+    border-radius: var(--radius-md);
+    background-color: var(--bg-input);
+    padding: var(--spacing-xs);
+    margin-bottom: var(--spacing-lg);
+    /* Add scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-dark) var(--bg-input);
+}
+
+#players-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#players-container::-webkit-scrollbar-track {
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+}
+
+#players-container::-webkit-scrollbar-thumb {
+    background-color: var(--primary-dark);
+    border-radius: var(--radius-sm);
+}
+
+#players-container li {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--bg-card);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
+    transition: all var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+}
+
+#players-container li:last-child {
+    margin-bottom: 0;
+}
+
+#players-container li:hover {
+    transform: translateX(3px);
+    box-shadow: var(--shadow-sm);
+}
+
+#players-container li.ready {
+    border-left: 3px solid var(--success);
+}
+
+#players-container li.host {
+    border-left: 3px solid var(--primary);
+}
+
+#players-container li.ready.host {
+    background: linear-gradient(135deg, var(--bg-card), rgba(76, 175, 80, 0.05));
+    border-left: 3px solid var(--primary);
+}
+
+#players-container li .player-avatar {
+    width: 36px;
+    height: 36px;
+    background-color: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: var(--spacing-md);
+    font-weight: 600;
+    color: #000;
+    flex-shrink: 0;
+}
+
+#players-container li .player-info {
+    flex: 1;
+    overflow: hidden;
+}
+
+#players-container li .player-info-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+#players-container li .player-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#players-container li .player-status {
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    gap: var(--spacing-md);
+}
+
+#players-container li .host-badge {
+    background-color: var(--primary);
+    color: #000;
+    padding: 2px var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-right: var(--spacing-md);
+    margin-left: var(--spacing-sm);
+}
+
+#players-container li .ready-indicator {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    color: var(--success);
+}
+
+#players-container li .ready-indicator .material-icons {
+    font-size: 18px;
+    margin-right: var(--spacing-xs);
+}
+
+#players-container li .player-metadata {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+/* Player join animation */
+@keyframes playerJoinSlide {
+    0% { 
+        transform: translateX(-20px); 
+        opacity: 0; 
+    }
+    100% { 
+        transform: translateX(0); 
+        opacity: 1; 
+    }
+}
+
+#players-container li {
+    animation: playerJoinSlide 0.3s ease forwards;
+}
+
+/* Player leave animation */
+@keyframes playerLeave {
+    0% { 
+        transform: translateX(0); 
+        opacity: 1; 
+    }
+    100% { 
+        transform: translateX(20px); 
+        opacity: 0; 
+        height: 0;
+        padding: 0;
+        margin: 0;
+    }
+}
+
+#players-container li.leaving {
+    animation: playerLeave 0.3s ease forwards;
+}
+
+/* Empty state */
+#players-container:empty::after {
+    content: "Waiting for players to join...";
+    display: block;
+    padding: var(--spacing-md);
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
 /* Typing animation for progress bars */
 @keyframes typing {
     0%, 100% { opacity: 0.5; }
