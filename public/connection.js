@@ -1,10 +1,16 @@
-// Simple connection setup that works in both local and production
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize socket connection - no custom configuration
-    // This approach works automatically in both environments
-    const socket = io();
+    // Use more resilient Socket.IO initialization with explicit options
+    const socket = io({
+        reconnection: true,
+        reconnectionAttempts: 10, // Increase from 5 to 10
+        reconnectionDelay: 1000, // Start with a shorter delay
+        reconnectionDelayMax: 5000, // Cap at 5 seconds
+        timeout: 10000, // Connection timeout
+        autoConnect: true,
+        transports: ['websocket', 'polling'] // Try websocket first, fallback to polling
+    });
     
-    console.log('Socket.IO initialized');
+    console.log('Socket.IO initialized with enhanced reconnection settings');
     
     // Create indicator element
     const indicator = document.createElement('div');
@@ -30,7 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let isConnected = false;
     let connectionLost = false;
     let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
+    const maxReconnectAttempts = 10; // Increased from 5
+    let pingInterval = null;
+    let reconnectTimer = null;
     
     // Socket.IO connection events
     socket.on('connect', () => {
@@ -39,7 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionLost = false;
         reconnectAttempts = 0;
         
-        // Keep connection alive with regular pings
+        // Clear any pending reconnect timers
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+        
+        // Start the ping interval with a more frequent rate
         startPingInterval();
         
         // Update indicator
@@ -52,22 +66,43 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             loadingOverlay.style.display = 'none';
         }, 500);
+        
+        // If we were in a room, attempt to rejoin
+        if (gameState?.roomId && gameState?.username) {
+            // Try to rejoin the room
+            socket.emit('rejoinRoom', {
+                roomId: gameState.roomId,
+                username: gameState.username
+            });
+        }
     });
     
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server');
+    socket.on('disconnect', (reason) => {
+        console.log('Disconnected from server:', reason);
         isConnected = false;
+        
+        // Handle specific disconnect reasons
+        if (reason === 'io server disconnect') {
+            // Server disconnected us, need to manually reconnect
+            console.log('Server initiated disconnect, attempting manual reconnect');
+            socket.connect();
+        }
         
         // Update indicator
         indicator.classList.remove('connected');
         
         // Only show interrupted message if we were previously connected
-        // (to avoid showing on initial load)
         if (connectionLost) {
             interruptedMsg.classList.add('visible');
         }
         
         connectionLost = true;
+        
+        // Stop ping interval when disconnected
+        if (pingInterval) {
+            clearInterval(pingInterval);
+            pingInterval = null;
+        }
     });
     
     socket.on('reconnect_attempt', (attemptNumber) => {
@@ -89,94 +124,87 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingOverlay.querySelector('.loading-spinner').style.display = 'none';
         loadingOverlay.querySelector('.loading-text').textContent = 
             'Connection failed. Please refresh the page to try again.';
+        
+        // Add a manual reconnect button
+        const reconnectButton = document.createElement('button');
+        reconnectButton.className = 'reconnect-button';
+        reconnectButton.textContent = 'Try Again';
+        reconnectButton.addEventListener('click', () => {
+            // Reset reconnect attempts
+            reconnectAttempts = 0;
+            
+            // Show spinner again
+            loadingOverlay.querySelector('.loading-spinner').style.display = 'block';
+            loadingOverlay.querySelector('.loading-text').textContent = 'Connecting to server...';
+            
+            // Manually attempt to reconnect
+            socket.connect();
+        });
+        
+        // Add button to overlay
+        loadingOverlay.appendChild(reconnectButton);
     });
     
     socket.on('reconnect', (attemptNumber) => {
         console.log(`Reconnected after ${attemptNumber} attempts`);
+        // Connection re-established, socket.on('connect') will handle the rest
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.log('Connection error:', error);
         
-        // Check if we need to rejoin the room
-        if (gameState.roomId) {
-            // If we were in a room, try to rejoin
-            socket.emit('rejoinRoom', {
-                roomId: gameState.roomId,
-                username: gameState.username
-            });
+        // If we get a transport error, force fallback to polling
+        if (error.message && error.message.includes('websocket')) {
+            console.log('WebSocket error, falling back to polling');
+            socket.io.opts.transports = ['polling', 'websocket'];
+        }
+        
+        // If we're not reconnecting automatically, schedule a manual reconnect
+        if (!socket.io.reconnecting && reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            const delay = Math.min(1000 * reconnectAttempts, 5000);
+            
+            console.log(`Scheduling manual reconnect in ${delay}ms`);
+            
+            reconnectTimer = setTimeout(() => {
+                console.log('Attempting manual reconnect');
+                socket.connect();
+            }, delay);
         }
     });
     
-    // Add custom event for room rejoining result
-    socket.on('roomRejoinResult', (data) => {
-        if (data.success) {
-            console.log('Successfully rejoined room');
-            
-            // Update game state with latest data
-            gameState.players = data.players;
-            gameState.isHost = data.isHost;
-            
-            // Update UI
-            updatePlayersList();
-            
-            // Show appropriate screen based on room status
-            if (data.status === 'waiting') {
-                showScreen('lobby');
-            } else if (data.status === 'racing') {
-                // If race is in progress, join as spectator
-                showScreen('race');
-                typingInput.disabled = true;
-                typingInput.placeholder = "Race in progress, you're now spectating...";
-            } else if (data.status === 'finished') {
-                showScreen('results');
-            }
-            
-            // Show notification
-            showNotification('Reconnected successfully');
-        } else {
-            console.log('Failed to rejoin room');
-            
-            // Reset game state
-            gameState = {
-                currentScreen: 'home',
-                roomId: '',
-                players: [],
-                isHost: false,
-                username: '',
-                selectedText: '',
-                raceStartTime: null,
-                raceEndTime: null,
-                currentWordIndex: 0,
-                currentCharIndex: 0,
-                errors: 0,
-                totalCharacters: 0,
-                completedWords: 0,
-                isRaceComplete: false,
-                timerInterval: null
-            };
-            
-            // Go back to home screen
-            showScreen('home');
-            
-            // Show error notification
-            showNotification('Could not rejoin previous room');
-        }
+    // Add error handling for socket.io error events
+    socket.on('error', (error) => {
+        console.error('Socket.IO error:', error);
     });
-
+    
     // Function to start the ping interval to keep connection alive
-    let pingInterval = null;
-
     function startPingInterval() {
         // Clear any existing interval
         if (pingInterval) {
             clearInterval(pingInterval);
         }
 
-        // Start a new ping interval - send ping every 30 seconds
+        // Start a new ping interval - send ping every 10 seconds (more frequent)
         pingInterval = setInterval(() => {
             if (socket.connected) {
+                // Send ping with timeout to detect stalled connections
+                const pingTimeout = setTimeout(() => {
+                    console.log('Ping timed out, connection may be stalled');
+                    // If ping times out, the connection might be stalled
+                    // Force a reconnection
+                    socket.disconnect().connect();
+                }, 5000);
+                
                 socket.emit('ping', () => {
                     // Pong received, connection is still good
+                    clearTimeout(pingTimeout);
                 });
+            } else if (reconnectAttempts < maxReconnectAttempts) {
+                // If not connected and under max attempts, try reconnecting
+                socket.connect();
             }
-        }, 30000);
+        }, 10000);
     }
 
     // Make socket available globally (needed for your other scripts)

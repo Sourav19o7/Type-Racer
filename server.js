@@ -13,14 +13,21 @@ const textSamples = require('./textSamples');
 const app = express();
 const server = http.createServer(app);
 // Update your Socket.IO initialization with these options
+// Update your Socket.IO initialization with these options
 const io = socketIO(server, {
-    pingTimeout: 60000, // How many ms without a pong packet to consider the connection closed
-    pingInterval: 25000, // How many ms before sending a new ping packet
-    upgradeTimeout: 10000, // How many ms before an upgrade is aborted
-    allowUpgrades: true, // Whether to allow transport upgrades
-    transports: ['websocket', 'polling'], // Enable websocket first, polling as fallback
-    cookie: false // Whether to use cookies for session handling (disable for performance)
-});
+    pingTimeout: 30000, // Reduce from 60000 to 30000
+    pingInterval: 10000, // Reduce from 25000 to 10000
+    upgradeTimeout: 5000, // Reduce from 10000 to 5000
+    transports: ['websocket', 'polling'], // Keep both transport methods
+    allowUpgrades: true,
+    cookie: false,
+    connectTimeout: 10000, // Add explicit connect timeout
+    path: '/socket.io/', // Ensure path is explicitly set
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
 
 // This line should be in your server.js file
 app.use(express.static(path.join(__dirname, 'public')));
