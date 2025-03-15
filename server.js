@@ -893,6 +893,30 @@ io.on('connection', (socket) => {
             platform
         });
     });
+
+    
+// Handle room existence check
+socket.on('checkRoomExists', function(data, callback) {
+    const roomId = data.roomId.toUpperCase();
+    
+    // Check if room exists
+    if (rooms.has(roomId)) {
+        const room = rooms.get(roomId);
+        
+        // Return room status
+        callback({
+            exists: true,
+            status: room.status,
+            playerCount: room.players.length
+        });
+    } else {
+        // Room doesn't exist
+        callback({
+            exists: false
+        });
+    }
+});
+
     
     // Handle room rejoining after disconnection
     socket.on('rejoinRoom', ({ roomId, username }) => {

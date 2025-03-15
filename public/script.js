@@ -411,6 +411,7 @@ function setupShareButtons() {
 }
 
 // Socket.IO Event Handlers
+
 socket.on('roomCreated', (data) => {
     gameState.roomId = data.roomId;
     gameState.isHost = data.isHost;
@@ -804,9 +805,10 @@ createRoomBtn.addEventListener('click', () => {
     socket.emit('createRoom', { username });
 });
 
-joinRoomBtn.addEventListener('click', () => {
+// Check room existence before joining
+joinRoomBtn.addEventListener('click', (e) => {
+    const roomId = roomIdInput.value.trim().toUpperCase();
     const username = usernameInput.value.trim();
-    const roomId = roomIdInput.value.trim();
     
     if (!username) {
         alert('Please enter a username');
@@ -818,12 +820,41 @@ joinRoomBtn.addEventListener('click', () => {
         return;
     }
     
-    // Store username
-    gameState.username = username;
+    // Show loading state
+    joinRoomBtn.disabled = true;
+    joinRoomBtn.classList.add('waiting');
+    joinRoomBtn.innerHTML = '<span class="material-icons">hourglass_empty</span>Checking...';
     
-    // Join room on server
-    socket.emit('joinRoom', { roomId, username });
+    // Use socket.io to check if room exists instead of fetch
+    socket.emit('checkRoomExists', { roomId }, (response) => {
+        // Reset button state
+        joinRoomBtn.disabled = false;
+        joinRoomBtn.classList.remove('waiting');
+        joinRoomBtn.innerHTML = '<span class="material-icons">login</span>Join Room';
+        
+        if (response.exists) {
+            if (response.status === 'racing') {
+                // Show warning for rooms with race in progress
+                const confirmJoin = confirm('This room has a race in progress. You will join as a spectator until the next race starts. Continue?');
+                if (confirmJoin) {
+                    // Proceed with join
+                    gameState.username = username;
+                    socket.emit('joinRoom', { roomId, username });
+                }
+            } else {
+                // Normal join
+                gameState.username = username;
+                socket.emit('joinRoom', { roomId, username });
+            }
+        } else {
+            alert('Room not found. Check the room ID and try again.');
+        }
+    });
+    
+    // Prevent default button click behavior
+    e.preventDefault();
 });
+
 
 startRaceBtn.addEventListener('click', () => {
     // Request to start race

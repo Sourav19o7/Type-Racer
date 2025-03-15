@@ -512,61 +512,6 @@ function formatTime(seconds) {
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Check room existence before joining
-document.getElementById('join-room-btn').addEventListener('click', (e) => {
-    const roomId = roomIdInput.value.trim().toUpperCase();
-    
-    if (roomId) {
-        // Show loading state
-        joinRoomBtn.disabled = true;
-        joinRoomBtn.classList.add('waiting');
-        joinRoomBtn.innerHTML = '<span class="material-icons">hourglass_empty</span>Checking...';
-        
-        // Make API request to check if room exists
-        fetch(`/api/rooms/${roomId}`)
-            .then(response => response.json())
-            .then(data => {
-                // Reset button state
-                joinRoomBtn.disabled = false;
-                joinRoomBtn.classList.remove('waiting');
-                joinRoomBtn.innerHTML = '<span class="material-icons">login</span>Join Room';
-                
-                if (data.exists) {
-                    if (data.status === 'racing') {
-                        // Show warning for rooms with race in progress
-                        const confirmJoin = confirm('This room has a race in progress. You will join as a spectator until the next race starts. Continue?');
-                        if (confirmJoin) {
-                            // Proceed with join
-                            const username = usernameInput.value.trim();
-                            gameState.username = username;
-                            socket.emit('joinRoom', { roomId, username });
-                        }
-                    } else {
-                        // Normal join
-                        const username = usernameInput.value.trim();
-                        gameState.username = username;
-                        socket.emit('joinRoom', { roomId, username });
-                    }
-                } else {
-                    alert('Room not found. Check the room ID and try again.');
-                }
-            })
-            .catch(error => {
-                console.error('Error checking room:', error);
-                
-                // Reset button state
-                joinRoomBtn.disabled = false;
-                joinRoomBtn.classList.remove('waiting');
-                joinRoomBtn.innerHTML = '<span class="material-icons">login</span>Join Room';
-                
-                alert('Error checking room. Please try again.');
-            });
-        
-        // Prevent default button click behavior
-        e.preventDefault();
-    }
-});
-
 // Enhance typing input to notify others
 typingInput.addEventListener('input', (e) => {
     // Notify other players that this player is typing
